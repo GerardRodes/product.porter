@@ -1,0 +1,33 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="product.porter">
+
+  <!-- Set overrides folder for Just-a-Bunch-Of-Templates product -->
+  <include package="z3c.jbot" file="meta.zcml" />
+  <browser:jbot
+      directory="overrides"
+      layer="product.porter.interfaces.IProductPorterLayer"
+      />
+
+
+
+  <browser:page
+      for="*"
+      name="exporter"
+      permission="zope2.View"
+      layer="product.porter.interfaces.IProductPorterLayer"
+      class=".views.exporter.ExportView"
+      />
+
+
+
+  <!-- Publish static files -->
+  <plone:static
+      name="product.porter"
+      type="plone"
+      directory="static"
+      />
+
+</configure>

@@ -1,0 +1,37 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    i18n_domain="product.porter">
+
+  <i18n:registerTranslations directory="locales" />
+
+  <includeDependencies package="." />
+
+  <include package=".browser" />
+
+
+  <genericsetup:registerProfile
+      name="default"
+      title="product.porter"
+      directory="profiles/default"
+      description="Installs the product.porter add-on."
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      post_handler=".setuphandlers.post_install"
+      />
+
+  <genericsetup:registerProfile
+      name="uninstall"
+      title="product.porter (uninstall)"
+      directory="profiles/uninstall"
+      description="Uninstalls the product.porter add-on."
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      post_handler=".setuphandlers.uninstall"
+      />
+
+
+  <utility
+      factory=".setuphandlers.HiddenProfiles"
+      name="product.porter-hiddenprofiles" />
+
+</configure>
