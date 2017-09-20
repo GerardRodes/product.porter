@@ -68,6 +68,32 @@ def processor_classname_from_field_type(field_type):
   return "%s%sProcessor" % (field_type[0].upper(), field_type[1:])
 
 
+def parse_field(field_name, field_instance):
+  field = {
+    'type':     field_instance._properties['type'],
+    'accessor': field_instance.accessor,
+    'mutator':  field_instance.mutator
+  }
+
+  if not field['accessor']:
+    field['accessor'] = 'get' + field_name[0].upper() + field_name[1:]
+
+  if not field['mutator']:
+    field['mutator'] = 'set' + field_name[0].upper() + field_name[1:]
+
+  return field
+
+
+def research_fields_by_schema(schema):
+  output = {}
+  for field_instance in schema.fields():
+    field_name = field_instance.getName()
+    if field_name != 'id':
+      field = parse_field(field_name, field_instance)
+      output[field_name] = field
+
+  return output
+
 
 # Parts
 from product.porter.modes import *

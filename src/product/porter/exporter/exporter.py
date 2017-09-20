@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from plone.i18n.normalizer.interfaces import IIDNormalizer
-from Products.CMFCore.utils import getToolByName
-from zope.component import getUtility
 from product.porter import *
 from datetime import datetime
 import sys
@@ -14,7 +11,7 @@ except:
 
 class Exporter:
 
-  def __init__(self, portal, mode, output_path, indent = None, logger_level = 0, **kwargs):
+  def __init__(self, portal, mode, output_path = '/tmp/exporter', indent = None, logger_level = 0, **kwargs):
     """
       portal
         portal object
@@ -53,8 +50,6 @@ class Exporter:
     self.log('Initialized', print_time = True)
 
     self.portal = portal
-    self.portal_workflow = getToolByName(portal, "portal_workflow")
-    self.normalizer = getUtility(IIDNormalizer)
 
     modename = mode.lower()
     mode_module = getattr(modes, modename, None)
@@ -69,22 +64,21 @@ class Exporter:
         mode_instance = ModeClass(portal, self.log)
 
         json_data = mode_instance._export(**kwargs)
+        output = {
+          "data": json_data,
+          "total": mode_instance.dumpped_objects,
+          "metadata": getattr(mode_instance, 'meta_types')
+        }
         try:
           json_file = open(self.json_file_path, 'w+')
-          json.dump({
-            "data": json_data,
-            "metadata": getattr(mode_instance, 'meta_types')
-          }, json_file, indent=self.indent)
+          json.dump(output, json_file, indent=self.indent)
           json_file.close()
         except:
           t, e = sys.exc_info()[:2]
           self.log(e)
-          self.log("Export while saving as json, trying save as txt...")
+          self.log("Error while saving as json, trying save as txt...")
           txt_file = open(self.json_file_path.replace('.json', '.txt'), 'w+')
-          txt_file.write(str({
-            "data": json_data,
-            "metadata": getattr(mode_instance, 'meta_types')
-          }))
+          txt_file.write(str(output))
           txt_file.close()
 
 

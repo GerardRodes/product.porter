@@ -2,7 +2,7 @@
 
 from Products.CMFCore.interfaces import IFolderish
 from Products.CMFCore.utils import getToolByName
-from product.porter import processors, processor_classname_from_field_type
+from product.porter import processors, processor_classname_from_field_type, research_fields_by_schema
 from product.porter.processors.datetime import parse_datetime
 
 
@@ -49,8 +49,8 @@ class IDumper:
       if item.meta_type not in self.meta_types.keys():
         self.log('Adding new meta_type %s' % item.meta_type, 1)
         self.meta_types[item.meta_type] = {
-          'meta_type': item.meta_type,
-          'fields':    self.research_fields_by_schema(item.schema),
+          'portal_type': getattr(item, 'portal_type', None),
+          'fields':    research_fields_by_schema(item.schema),
         }
 
       for field_name in self.meta_types[item.meta_type]['fields'].keys():
@@ -58,34 +58,6 @@ class IDumper:
         item_json['fields'][field_name] = self.dump_field(item, field_name, field_data)
 
     return item_json
-
-
-  def research_fields_by_schema(self, schema):
-    output = {}
-    for field_instance in schema.fields():
-      field_name = field_instance.getName()
-      if field_name != 'id':
-        field = self.parse_field(field_name, field_instance)
-        output[field_name] = field
-        self.log('Added field width data: ' + str(field), level=1)
-
-    return output
-
-
-  def parse_field(self, field_name, field_instance):
-    field = {
-      'type':     field_instance._properties['type'],
-      'accessor': field_instance.accessor,
-      'mutator':  field_instance.mutator
-    }
-
-    if not field['accessor']:
-      field['accessor'] = 'get' + field_name[0].upper() + field_name[1:]
-
-    if not field['mutator']:
-      field['mutator'] = 'set' + field_name[0].upper() + field_name[1:]
-
-    return field
 
 
   def dump_field(self, item, field_name, field_data):

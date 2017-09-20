@@ -30,7 +30,7 @@ class Logger:
     self.file.close()
 
 
-  def log(self, message, level = 0, print_time = None):
+  def log(self, message, level = 0, print_time = None, exception = False):
     if level <= self.level:
 
       if print_time == None:
@@ -55,3 +55,6 @@ class Logger:
       log_file = open(self.file.name, 'a')
       log_file.write(output)
       log_file.close()
+
+    if exception:
+      raise Exception(message)

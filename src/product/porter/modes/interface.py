@@ -14,7 +14,7 @@ class IMode:
     return None
 
 
-  def _import(self):
+  def _import(self, json_data):
     """
       Given some custom params and a json creates content on the site
     """

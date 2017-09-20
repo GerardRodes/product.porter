@@ -50,6 +50,7 @@ class ContainerMode(IMode, IDumper):
     item = self.portal.unrestrictedTraverse(root)
 
     def dump_item(item):
+      # Plone object to json
       if limit and self.dumpped_objects >= limit:
         return
 
@@ -71,5 +72,79 @@ class ContainerMode(IMode, IDumper):
 
       return item_json
 
-
     return dump_item(item)
+
+
+  def _import(self, json_data, root, limit = None):
+    """
+      root
+        folder path where to start the creation of files
+    """
+
+    if limit:
+      total = limit
+      self.log("Import limitted to %i objects." % limit)
+    else:
+      total = json_data["total"]
+
+    try:
+      folder = self.portal.unrestrictedTraverse(root)
+    except:
+      self.log("Container at '%s' doesn't exists, create it manually." % root, exception = True)
+
+    self.processed_objects = 0
+
+    def create_item(item_json, parent):
+      # json to Plone object
+
+      if limit and self.processed_objects >= limit:
+        return
+
+      item_portal_type = item_json['metadata']['portal_type']
+      if item_portal_type != "Plone Site":
+        item_id = item_json['metadata']['id']
+        created_or_updated = "Created"
+        if item_id not in parent:
+          # If doesn't exists create object
+          parent.invokeFactory(item_portal_type, item_id)
+          item = parent[item_id]
+          item.reindexObject()
+
+        else:
+          item = parent[item_id]
+          created_or_updated = "Updated"
+
+        if 'status' in item_json['metadata']:
+          status = item_json['metadata']['status']
+          for action in self.portal_workflow.listActions(object=item):
+            if 'id' in action and 'transition' in action and action['transition'].new_state_id == status['review_state'] and self.portal_workflow.getInfoFor(item, 'review_state') != action['transition'].new_state_id:
+              try:
+                self.portal_workflow.doActionFor(item, action['id'])
+              except:
+                t, e = sys.exc_info()[:2]
+                self.happens("Something went wront while updating review state:\n%s\nItem json data status:\n%s" % (str(e), str(status)))
+                pass
+
+        # Set fields values
+
+
+        self.processed_objects += 1
+        self.log(
+          "%i/%i %s item with id: %s" %
+          (self.processed_objects, total, created_or_updated, item_id)
+        )
+
+      else:
+        self.log("This item is a Plone Site, it's childs will be created at the current container: '%s'" % str(parent))
+        # If the first item is the Plone Site it will be omitted
+        # and all it's children will be created inside the specified root folder
+        item = parent
+      
+
+
+      if 'childs' in item_json:
+        for child in item_json['childs']:
+          create_item(child, item)
+
+
+    create_item(json_data['data'], folder)
