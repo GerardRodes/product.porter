@@ -5,6 +5,7 @@ from Products.CMFCore.utils import getToolByName
 from zope.component import getUtility
 from product.porter import *
 from datetime import datetime
+import sys
 try:
   import json
 except:
@@ -13,7 +14,7 @@ except:
 
 class Exporter:
 
-  def __init__(self, portal, mode, output_path, indent = None, **kwargs):
+  def __init__(self, portal, mode, output_path, indent = None, logger_level = 0, **kwargs):
     """
       portal
         portal object
@@ -42,7 +43,7 @@ class Exporter:
       self.filename = "data.json"
       self.output_path = output_path
 
-    self.logger = Logger(self.output_path)
+    self.logger = Logger(self.output_path, level = logger_level)
     self.log = self.logger.log
 
     self.json_file_path = '/'.join(self.output_path.split('/') + [self.filename])

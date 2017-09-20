@@ -3,7 +3,7 @@
 from Products.CMFCore.interfaces import IFolderish
 from Products.CMFCore.utils import getToolByName
 from product.porter import processors, processor_classname_from_field_type
-
+from product.porter.processors.datetime import parse_datetime
 
 
 class IDumper:
@@ -35,7 +35,9 @@ class IDumper:
     if len(chain) > 0:
       state = self.portal_workflow.getStatusOf(chain[0], item)
       if state and 'review_state' in state:
-        item_json['metadata']['review_state'] = state['review_state']
+        item_json['metadata']['status'] = state
+        item_json['metadata']['status']['time'] = parse_datetime(item_json['metadata']['status']['time'])["value"]
+        item_json['metadata']['status']['workflow'] = chain[0]
 
     if hasattr(item, 'UID'):
       item_json['metadata']['uid'] = item.UID()

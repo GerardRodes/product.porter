@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
-import os, sys
+import os, sys, unicodedata
 
 
 class Logger:
@@ -36,16 +36,20 @@ class Logger:
       if print_time == None:
         print_time = self.print_time
 
-      output = u''
+      output = ''
 
       if print_time:
-        output += u'%s -- ' % datetime.now().strftime('%H:%M:%S')
+        output += '%s -- ' % datetime.now().strftime('%H:%M:%S')
 
-      output += unicode(message) + u'\n'
+      if isinstance(message, unicode):
+        message = unicodedata.normalize('NFKD', message).encode('ascii','ignore')
+
+      output += str(message) + '\n'
 
       # print at console
       sys.stdout.write(output)
       sys.stdout.flush()
+
 
       # print at file
       log_file = open(self.file.name, 'a')
