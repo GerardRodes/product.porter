@@ -98,9 +98,9 @@ def field_processor_factory(context, item, field_name, field_metadata, field_dat
     if ProcessorClass:
       return ProcessorClass(item, field_name, field_metadata, context, field_data)
     else:
-      context.log("Processor class %s not found at %s" % (processor_classname, processor_module.__name__))
+      context.log("Processor class %s not found at %s" % (processor_classname, processor_module.__name__), exception = True)
   else:
-    context.log("Processor module %s not found at %s" % (field_metadata['type'], processors.__name__))
+    context.log("Processor module %s not found at %s" % (field_metadata['type'], processors.__name__), exception = True)
 
 
 

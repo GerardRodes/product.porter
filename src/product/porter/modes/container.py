@@ -37,7 +37,9 @@ class ContainerMode(IMode):
     self.dumpped_objects = 0
     if not limit:
       self.guessed_coincidences = len( self.catalog({
-        "path": root
+        "path": {
+          "query": root
+        }
       }.update(content_filter)) )
       self.log("Found %i coincidences, could be less results at exported data." % self.guessed_coincidences)
     else:

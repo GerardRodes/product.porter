@@ -83,7 +83,7 @@ class Importer:
           self.log("%s isn't installed on the portal, can't continue with the process.\n\
             This is a list of the currently installed content types:\n%s" % (meta_type, ', '.join(portal_types)), exception = True)
 
-        self.portal.invokeFactory(portal_type, tempname)
+        portal_types_tool.constructContent(portal_type, self.portal, tempname)
         portal_schema_fields = research_fields_by_schema(self.portal[tempname].schema)
         
         for field in meta_type_data['fields']:

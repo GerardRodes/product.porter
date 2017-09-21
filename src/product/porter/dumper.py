@@ -54,6 +54,7 @@ class IDumper(object):
         }
 
       for field_name in self.meta_types[item.meta_type]['fields'].keys():
+        self.log("Adding field %s" % field_name, 2)
         field_metadata = self.meta_types[item.meta_type]['fields'][field_name]
         item_json['fields'][field_name] = self.dump_field(item, field_name, field_metadata)
 

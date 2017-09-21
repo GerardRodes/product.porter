@@ -10,3 +10,4 @@ from product.porter.processors import datetime
 from product.porter.processors import boolean
 from product.porter.processors import file
 from product.porter.processors import image
+from product.porter.processors import computed
