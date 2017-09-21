@@ -4,7 +4,7 @@ from datetime import datetime
 import os, sys, unicodedata
 
 
-class Logger:
+class Logger(object):
 
   def __init__(self, folder_path, level = 0, print_time = False):
     """

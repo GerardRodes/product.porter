@@ -7,5 +7,5 @@ class ReferenceProcessor(IProcessor):
 
   def extract(self):
     return {
-      "value": [item.UID() for item in getattr(self.item, self.field_data['accessor'])()]
+      "value": [item.UID() for item in self.accessor()]
     }

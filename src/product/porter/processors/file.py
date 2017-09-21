@@ -58,8 +58,8 @@ class FileProcessor(IProcessor):
       temp_name    = filename
       self.log('Creating file %s, size: %s ' % (temp_name, str(size)), 1)
 
-      if self.dumper.download_files:
-        file_path = '/'.join(self.dumper.output_folder.split('/') + [temp_name])
+      if self.context.download_files:
+        file_path = '/'.join(self.context.output_folder.split('/') + [temp_name])
 
         while os.path.isfile(file_path):
           # If file exists check if is the same file or not
@@ -76,7 +76,7 @@ class FileProcessor(IProcessor):
             self.log("File `%s` has the same content, we are going to use it instead." % file_path, 1)
             break
           temp_name = upgrade_copy_name(temp_name)
-          file_path = '/'.join(self.dumper.output_folder.split('/') + [temp_name])
+          file_path = '/'.join(self.context.output_folder.split('/') + [temp_name])
 
 
         file_relative_path = '/'.join(['.'] + ['files', temp_name])
@@ -94,4 +94,26 @@ class FileProcessor(IProcessor):
 
 
   def get_data(self):
-    return str(getattr(self.item, self.field_data['accessor'])())
+    return str(self.accessor())
+
+
+  def value(self):
+    file_relative_path = self.field_data['value']
+    file_path =  '/'.join(self.context.import_folder.split('/') + file_relative_path.split('/'))
+
+    file = open(file_path, 'r')
+    file_data = file.read()
+    file.close()
+
+    return file_data
+
+
+  def mutator(self, value):
+    # This only will work for Archetypes
+    super(FileProcessor, self).mutator(value)
+
+    if self.field_data['content_type']:
+      self.item.setContentType(self.field_data['content_type'], self.field_name)
+
+    if self.field_data['filename']:
+      self.item.setFilename(self.field_data['filename'], self.field_name)

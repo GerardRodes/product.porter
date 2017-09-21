@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 from Products.CMFCore.utils import getToolByName
 from product.porter.modes.interface import IMode
-from product.porter.dumper import IDumper
+from product.porter import field_processor_factory
 from Products.CMFCore.interfaces import IFolderish
 import os
 
 
-
-class ContainerMode(IMode, IDumper):
+class ContainerMode(IMode):
 
   def __init__(self, portal, log):
     IMode.__init__(self, portal, log)
-    IDumper.__init__(self, portal)
     self.catalog = self.portal.portal_catalog
 
 
@@ -75,17 +73,25 @@ class ContainerMode(IMode, IDumper):
     return dump_item(item)
 
 
-  def _import(self, json_data, root, limit = None):
+  def _import(self, json_data, import_folder, root, limit = None):
     """
+      json_data
+        it comes from the Importer, don't worry about it (It's your json_path loaded)
+
+      import_folder
+        path of the folder where the json file is located
+
       root
         folder path where to start the creation of files
     """
+    self.json_data = json_data
+    self.import_folder = import_folder
 
     if limit:
       total = limit
       self.log("Import limitted to %i objects." % limit)
     else:
-      total = json_data["total"]
+      total = self.json_data["total"]
 
     try:
       folder = self.portal.unrestrictedTraverse(root)
@@ -101,19 +107,35 @@ class ContainerMode(IMode, IDumper):
         return
 
       item_portal_type = item_json['metadata']['portal_type']
+      item_meta_type   = item_json['metadata']['meta_type']
+
       if item_portal_type != "Plone Site":
         item_id = item_json['metadata']['id']
+        item_uid = item_json['metadata']['uid']
         created_or_updated = "Created"
+
         if item_id not in parent:
           # If doesn't exists create object
           parent.invokeFactory(item_portal_type, item_id)
           item = parent[item_id]
           item.reindexObject()
-
         else:
+          # Else get it to update if needed
           item = parent[item_id]
           created_or_updated = "Updated"
 
+        try:
+          same_uid_objects = self.portal.reference_catalog.lookupObject(item_uid)
+          if item_uid != item.UID() and not same_uid_objects:
+            item._setUID(item_uid)
+            item.reindexObject()
+            self.log("UID %s setted for %s." % (item_uid, str(item)), 1)
+        except:
+          self.log("Couldn't set UID %s for %s." % (item_uid, str(item)), 1)
+          pass
+
+
+        # Setting review_state
         if 'status' in item_json['metadata']:
           status = item_json['metadata']['status']
           for action in self.portal_workflow.listActions(object=item):
@@ -122,11 +144,39 @@ class ContainerMode(IMode, IDumper):
                 self.portal_workflow.doActionFor(item, action['id'])
               except:
                 t, e = sys.exc_info()[:2]
-                self.happens("Something went wront while updating review state:\n%s\nItem json data status:\n%s" % (str(e), str(status)))
+                self.log("Something went wront while updating review state:\n%s\nItem json data status:\n%s" % (str(e), str(status)))
                 pass
 
-        # Set fields values
 
+        # Setting fields values
+        if 'fields' in item_json:
+          for field_name in item_json['fields']:
+            field_metadata = self.json_data['metadata'][item_meta_type]['fields'][field_name]
+            field_data     = item_json['fields'][field_name]
+            processor_instance = field_processor_factory(self, item, field_name, field_metadata, field_data)
+
+            # extract returns the current value of the field setted at the plone object
+            # value returns the new value of the field to set
+            current_value = processor_instance.accessor()
+            new_value = processor_instance.value()
+
+            try:
+              if type(new_value) != type(current_value):
+                if isinstance(new_value, str):
+                    current_value = str(current_value)
+            except:
+              pass
+
+            if new_value != current_value:
+              # mutator sets the value to the field
+              processor_instance.mutator(new_value)
+              self.log("Field %s value setted." % field_name, 1)
+            else:
+              self.log("Field %s value ignored.\ncurrent value:%s\nnew value:%s" %
+                (field_name, str(current_value), str(new_value)), 1)
+
+
+        item.reindexObject()
 
         self.processed_objects += 1
         self.log(
@@ -135,16 +185,16 @@ class ContainerMode(IMode, IDumper):
         )
 
       else:
-        self.log("This item is a Plone Site, it's childs will be created at the current container: '%s'" % str(parent))
         # If the first item is the Plone Site it will be omitted
         # and all it's children will be created inside the specified root folder
+        self.log("This item is a Plone Site, it's childs will be created at the current container: '%s'" % str(parent))
         item = parent
       
 
-
+      # And the power of recursion for its childs!
       if 'childs' in item_json:
         for child in item_json['childs']:
           create_item(child, item)
 
 
-    create_item(json_data['data'], folder)
+    create_item(self.json_data['data'], folder)

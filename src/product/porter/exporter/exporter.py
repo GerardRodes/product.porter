@@ -51,6 +51,9 @@ class Exporter:
 
     self.portal = portal
 
+
+    # EXECUTING EXPORT MODE
+
     modename = mode.lower()
     mode_module = getattr(modes, modename, None)
 

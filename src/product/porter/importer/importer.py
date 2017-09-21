@@ -107,6 +107,9 @@ class Importer:
     if check_integrity:
       self.log("Metadata integrity correct.")
 
+
+    # EXECUTING IMPORT MODE
+
     modename = mode.lower()
     mode_module = getattr(modes, modename, None)
 
@@ -118,7 +121,8 @@ class Importer:
 
       if ModeClass:
         mode_instance = ModeClass(portal, self.log)
-        mode_instance._import(self.json_data, **kwargs)
+        import_folder = '/'.join( self.json_file_path.split('/')[:-1] )
+        mode_instance._import(self.json_data, import_folder, **kwargs)
 
       else:
         self.log('Class `%s` not found at %s' % (classname, mode_module.__name__))

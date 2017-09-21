@@ -5,6 +5,7 @@ from DateTime import DateTime
 
 
 def parse_datetime(value):
+  # To json
   if isinstance(value, DateTime):
     return {
       "value":  value.parts(),
@@ -16,9 +17,16 @@ def parse_datetime(value):
       "value": value
     }
 
-
 class DatetimeProcessor(IProcessor):
   
   def extract(self):
-    value = getattr(self.item, self.field_data['accessor'])()
-    return parse_datetime(value)
+    return parse_datetime(self.accessor())
+
+
+  def value(self):
+    value = self.field_data['value']
+    if value:
+      value = DateTime(value[0], value[1], value[2], value[3], value[4], value[5], value[6])
+      return value
+    else:
+      return None

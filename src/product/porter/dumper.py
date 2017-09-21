@@ -2,11 +2,11 @@
 
 from Products.CMFCore.interfaces import IFolderish
 from Products.CMFCore.utils import getToolByName
-from product.porter import processors, processor_classname_from_field_type, research_fields_by_schema
+from product.porter import field_processor_factory, research_fields_by_schema
 from product.porter.processors.datetime import parse_datetime
 
 
-class IDumper:
+class IDumper(object):
   """
     Provides the ability to dump portal items to json
   """
@@ -54,29 +54,19 @@ class IDumper:
         }
 
       for field_name in self.meta_types[item.meta_type]['fields'].keys():
-        field_data = self.meta_types[item.meta_type]['fields'][field_name]
-        item_json['fields'][field_name] = self.dump_field(item, field_name, field_data)
+        field_metadata = self.meta_types[item.meta_type]['fields'][field_name]
+        item_json['fields'][field_name] = self.dump_field(item, field_name, field_metadata)
 
     return item_json
 
 
-  def dump_field(self, item, field_name, field_data):
-    processor_module = getattr(processors, field_data['type'], None)
-    if processor_module:
-      processor_classname = processor_classname_from_field_type(field_data['type'])
-      ProcessorClass = getattr(processor_module, processor_classname, None)
+  def dump_field(self, item, field_name, field_metadata):
+    processor_instance = field_processor_factory(self, item, field_name, field_metadata)
+    data = processor_instance.extract()
 
-      if ProcessorClass:
-        processor_instance = ProcessorClass(item, field_name, field_data, self)
-        data = processor_instance.extract()
-
-        if not isinstance(data, dict) or 'value' not in data:
-          msg = "Processor <%s> `extract` method must return a dictionary with a keyword named `value` containing the field value.\nInstead it returned this data: %s" % (processor_classname, str(data))
-          self.log(msg)
-          raise Exception(msg)
-        else:
-          return data
-      else:
-        self.log("Processor class %s not found at %s" % (processor_classname, processor_module.__name__))
+    if not isinstance(data, dict) or 'value' not in data:
+      msg = "Processor <%s> `extract` method must return a dictionary with a keyword named `value` containing the field value.\nInstead it returned this data: %s" % (processor_classname, str(data))
+      self.log(msg)
+      raise Exception(msg)
     else:
-      self.log("Processor module %s not found at %s" % (field_data['type'], processors.__name__))
+      return data

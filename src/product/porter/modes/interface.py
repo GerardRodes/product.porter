@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from product.porter.dumper import IDumper
 
-class IMode:
+class IMode(IDumper):
 
   def __init__(self, portal, log):
-    self.portal = portal
+    IDumper.__init__(self, portal)
     self.log = log
 
 
