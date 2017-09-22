@@ -21,6 +21,14 @@
       class=".views.exporter.ExportView"
       />
 
+  <browser:page
+      for="*"
+      name="importer"
+      permission="zope2.View"
+      layer="product.porter.interfaces.IProductPorterLayer"
+      class=".views.importer.ImportView"
+      />
+
 
 
   <!-- Publish static files -->

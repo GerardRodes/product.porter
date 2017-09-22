@@ -75,7 +75,7 @@ class ContainerMode(IMode):
     return dump_item(item)
 
 
-  def _import(self, json_data, import_folder, root, limit = None):
+  def _import(self, json_data, import_folder, root, fields_map, limit = None):
     """
       json_data
         it comes from the Importer, don't worry about it (It's your json_path loaded)
@@ -88,6 +88,7 @@ class ContainerMode(IMode):
     """
     self.json_data = json_data
     self.import_folder = import_folder
+    self.fields_map = fields_map
 
     if limit:
       total = limit
@@ -155,7 +156,8 @@ class ContainerMode(IMode):
           for field_name in item_json['fields']:
             field_metadata = self.json_data['metadata'][item_meta_type]['fields'][field_name]
             field_data     = item_json['fields'][field_name]
-            processor_instance = field_processor_factory(self, item, field_name, field_metadata, field_data)
+            field_map      = get_field_map(item_meta_type, field_name, self.fields_map)
+            processor_instance = field_processor_factory(self, item, field_name, field_metadata, field_data, field_map)
 
             # extract returns the current value of the field setted at the plone object
             # value returns the new value of the field to set

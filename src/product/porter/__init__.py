@@ -4,6 +4,15 @@
 
 from zope.i18nmessageid import MessageFactory
 from product.porter import processors
+try:
+  from zope.schema import getFieldsInOrder
+  from plone.behavior.interfaces import IBehaviorAssignable
+  from zope.schema.interfaces import *
+  from plone.app.textfield.interfaces import IRichText
+  from plone.namedfile.interfaces import *
+except:
+  print "Can't import dexterity tools"
+  pass
 
 _ = MessageFactory('product.porter')
 META_TYPES = (
@@ -40,6 +49,89 @@ META_TYPES = (
   'FormTextField',
   'FormThanksPage',
 )
+IGNORE = "__ignore__"
+ALL = "__all__"
+DEFAULT_FIELDS_MAP = {
+  ALL: {
+    "presentation": {"name": IGNORE},
+    "rights": {"name": IGNORE},
+    "subject": {"name": "subjects"},
+    "location": {"name": IGNORE},
+    "creation_date": {"name": "created"},
+    "effectiveDate": {"name": "effective"},
+    "expirationDate": {"name": "expires"},
+    "allowDiscussion": { "name": "allow_discussion", "filter": lambda value: value},
+    "excludeFromNav": {"name": "exclude_from_nav"},
+    "tableContents": {"name": "table_of_contents"},
+    "modification_date": {"name": "modified"},
+    "immediatelyAddableTypes": {"name": "immediately_addable_types"},
+    "locallyAllowedTypes": {"name": "locally_allowed_types"},
+    "constrainTypesMode": {"name": "constrain_types_mode"},
+  },
+}
+
+try:
+  # Which processor correspond to each field interface
+  # They are ordered from less to most priority
+  PROCESSORS = [{
+    'name': 'boolean',
+    'interfaces': [IBool],
+    'fields': []
+  },
+  {
+    'name': 'computed',
+    'interfaces': [],
+    'fields': []
+  },
+  {
+    'name': 'file',
+    'interfaces': [IFile, INamedField, INamedBlobFile],
+    'fields': []
+  },
+  {
+    'name': 'image',
+    'interfaces': [INamedImage, INamedBlobImage],
+    'fields': [],
+    'filter': lambda field_instance: hasattr(field_instance, 'getImageSize'),
+  },
+  {
+    'name': 'integer',
+    'interfaces': [IInt, IBytesLine, IBytes],
+    'fields': []
+  },
+  {
+    'name': 'float',
+    'interfaces': [IFloat, IDecimal],
+    'fields': []
+  },
+  {
+    'name': 'lines',
+    'interfaces': [ITuple, IAbstractSet, IUnorderedCollection, IDict, IList, IIterable, ISet, ISequence, ICollection],
+    'fields': []
+  },
+  {
+    'name': 'reference',
+    'interfaces': [],
+    'fields': ['relatedItems']
+  },
+  {
+    'name': 'string',
+    'interfaces': [ISourceText, IURI, INativeStringLine, IASCIILine, ITextLine, IPassword, IId, INativeString, IASCII, IChoice, IText],
+    'fields': []
+  },
+  {
+    'name': 'text',
+    'interfaces': [IRichText],
+    'fields': ['description']
+  },
+  {
+    'name': 'datetime',
+    'interfaces': [IDate, ITime, ITimedelta, IDatetime],
+    'fields': []
+  }]
+except:
+  print "Can't set dexterity globals"
+  pass
 
 
 
@@ -59,14 +151,17 @@ def test(condition, true, false = None):
     return false
 
 
+
 def classname_from_modename(name):
   # Given a modename returns its classname
   return "%s%sMode" % (name[0].upper(), name[1:])
 
 
+
 def processor_classname_from_field_type(field_type):
   # Given a field_type returns its processor class name
   return "%s%sProcessor" % (field_type[0].upper(), field_type[1:])
+
 
 
 def field_processor_factory(context, item, field_name, field_metadata, field_data = None):
@@ -104,8 +199,6 @@ def field_processor_factory(context, item, field_name, field_metadata, field_dat
 
 
 
-
-
 def parse_field(field_name, field_instance):
   field = {
     'type':     field_instance._properties['type'],
@@ -122,7 +215,9 @@ def parse_field(field_name, field_instance):
   return field
 
 
+
 def research_fields_by_schema(schema):
+  # Parses field from archetypes schema
   output = {}
   for field_instance in schema.fields():
     field_name = field_instance.getName()
@@ -131,6 +226,72 @@ def research_fields_by_schema(schema):
       output[field_name] = field
 
   return output
+
+
+
+def parse_field_dexterity(field_name, field_instance):
+  field_type = None
+  for processor in PROCESSORS:
+    if field_name in processor['fields']:
+      field_type = processor['name']
+      break
+
+  if field_name == 'image':
+    print 'filter'
+    print field_instance.getImageSize
+    print hasattr(field_instance, 'getImageSize')
+
+  if not field_type:
+    for processor in PROCESSORS:
+      if 'filter' in processor and processor['filter'](field_instance):
+        field_type = processor['name']
+      for interface in processor['interfaces']:
+        if interface.providedBy(field_instance):
+          field_type = processor['name']
+
+  if not field_type:
+    raise Exception("Field %s %s doesn't have assigned any processor at variable PROCESSORS at product.porter.__init__.py file" % (field_name, str(field_interface)))
+
+  return {
+    'type':     field_type
+  }
+
+
+
+def researh_fields_dexterity(item):
+  # Get fields from schema
+  fields = {
+    "created": {"type": "datetime"},
+    "modified": {"type": "datetime"},
+    "immediately_addable_types": {"type": "lines"},
+    "locally_allowed_types": {"type": "lines"},
+    "constrain_types_mode": {"type": "integer"},
+  }
+  for field_name, field_instance in getFieldsInOrder(item.getTypeInfo().lookupSchema()):
+    fields[field_name] = parse_field_dexterity(field_name, field_instance)
+
+  # Get fields from behaviors
+  behavior_assignable = IBehaviorAssignable(item)
+  if behavior_assignable:
+    behaviors = behavior_assignable.enumerateBehaviors()
+    for behavior in behaviors:
+      for field_name, field_instance in getFieldsInOrder(behavior.interface):
+        fields[field_name] = parse_field_dexterity(field_name, field_instance)
+
+  return fields
+
+
+
+def get_meta_type_fields_map(meta_type, fields_map):
+  meta_type_fields_map = fields_map.get(ALL, {})
+  meta_type_fields_map.update(fields_map.get(meta_type, {}))
+  return meta_type_fields_map
+
+
+
+def get_field_map(meta_type, field_name, fields_map):
+  return get_meta_type_fields_map(meta_type, fields_map).get(field_name, {})
+
 
 
 # Parts

@@ -16,6 +16,9 @@ class TextProcessor(IProcessor):
   def value(self):
     value = self.field_data['value']
 
+    if self.field_data['content_type'] == 'text/plain':
+      return value
+
     if isinstance(value, unicode):
       value = unicodedata.normalize('NFC', value).encode("utf-8")
 
